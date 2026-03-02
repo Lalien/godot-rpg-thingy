@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://khcp11an7nt6"]
+
+[ext_resource type="Script" uid="uid://cr17odurpwyru" path="res://scripts/interactable_object.gd" id="1_gknyc"]
+
+[node name="Area2D" type="Area2D"]
+position = Vector2(4, 2)
+monitoring = false
+script = ExtResource("1_gknyc")
+
+[connection signal="body_shape_entered" from="." to="." method="_on_body_shape_entered"]
