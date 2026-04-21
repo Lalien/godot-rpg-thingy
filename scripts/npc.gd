@@ -46,13 +46,15 @@ func _ready():
 
 func _on_detection_zone_entered(body):
 	if body is CharacterBody2D and body.get("playerCharacter") and body.playerCharacter:
+		print("Inside the detection zone")
 		player_target = body
-		if not is_returning:
+		if not is_returning and not is_following:
 			is_following = _can_see_target(body)
+			print("_on_detection_zone_entered ", is_following)
 
 func _on_detection_zone_exited(body):
 	if body == player_target and not is_returning:
-		is_following = false
+		is_following  = false
 		player_target = null
 
 func _can_see_target(target: CharacterBody2D) -> bool:
@@ -62,6 +64,7 @@ func _can_see_target(target: CharacterBody2D) -> bool:
 	if to_target.length() > detection_radius:
 		return false
 	if to_target == Vector2.ZERO:
+		print("oi!");
 		return true
 	var facing := _last_direction
 	if facing == Vector2.ZERO:
@@ -69,6 +72,7 @@ func _can_see_target(target: CharacterBody2D) -> bool:
 	var facing_dir := facing.normalized()
 	var target_dir := to_target.normalized()
 	var threshold := cos(deg_to_rad(vision_angle_degrees * 0.5))
+	
 	return facing_dir.dot(target_dir) >= threshold
 
 func _on_contact_zone_entered(body):
@@ -82,15 +86,25 @@ func _physics_process(_delta: float) -> void:
 	print("Is Following? ", is_following)
 	print("Is Returning? ", is_returning)
 	print(player_target)
-	if player_target and not is_returning:
+		
+	if player_target and not is_returning and not is_following:
 		is_following = _can_see_target(player_target)
-	if player_target and global_position.distance_to(player_target.global_position) > return_distance:
+	
+	# If the NPC is locked onto the player and the player goes out of their range
+	if player_target and is_following and global_position.distance_to(player_target.global_position) > return_distance:
 		is_following = false
 		is_returning = true
 	
+	# If the player is out of range of the player and returning to the their spot of origin.
 	if is_returning:
 		var direction = (starting_position - global_position)
 		var distance_to_start = direction.length()
+		# If position is exactly at starting position, stop returning
+		if global_position == starting_position:
+			is_returning = false
+			velocity = Vector2.ZERO
+			_play_idle()
+			return
 		
 		if distance_to_start > 5.0:  # Small threshold to avoid jittering
 			direction = direction.normalized()
@@ -103,36 +117,39 @@ func _physics_process(_delta: float) -> void:
 			global_position = starting_position  # Snap to exact position
 			_play_idle()
 			# Check if player is still in detection zone to resume following
-			if player_target and global_position.distance_to(player_target.global_position) <= detection_radius:
-				is_following = true
+			#if player_target and global_position.distance_to(player_target.global_position) <= detection_radius:
+				#print("Is returning is following")
+				#print(global_position.distance_to(player_target.global_position))
+				#is_following = true
+				
 	elif is_following and player_target:
 		var direction = (player_target.global_position - global_position)
 		var distance_to_player = direction.length()
 		var distance_from_start = global_position.distance_to(starting_position)
-		print("following")
-		print(direction)
-		print(distance_to_player)
-		print(distance_from_start)
-		# Check if moving toward player would exceed max distance from start
+		print(velocity)
+		#print("following")
+		#print(direction)
+		#print(distance_to_player)
+		#print(distance_from_start)
+		# Check if player has gotten a certain amount of distance from the enemy
 		if distance_to_player > stop_distance:
-			print("exceeded max distance")
+			#print("exceeded max distance")
 			direction = direction.normalized()
 			var next_position = global_position + direction * speed * _delta
 			
 			# Only move if we won't exceed the boundary
+			#print("Next position: ", next_position)
+			#print("Next position distance to: ", next_position.distance_to(starting_position))
 			if next_position.distance_to(starting_position) <= max_distance_from_start:
+				#print("Move!")
 				velocity = direction * speed
 				_last_direction = direction
 				_update_animation(direction)
 			else:
-				velocity = Vector2.ZERO
-				_play_idle()
+				is_returning = true
 		elif distance_from_start > max_distance_from_start:
-			print("exceeded max distance from starting point")
+			#print("exceeded max distance from starting point")
 			is_returning = true
-		else:
-			velocity = Vector2.ZERO
-			_play_idle()
 	else:
 		velocity = Vector2.ZERO
 		_play_idle()
