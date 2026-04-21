@@ -64,7 +64,6 @@ func _can_see_target(target: CharacterBody2D) -> bool:
 	if to_target.length() > detection_radius:
 		return false
 	if to_target == Vector2.ZERO:
-		print("oi!");
 		return true
 	var facing := _last_direction
 	if facing == Vector2.ZERO:
@@ -99,13 +98,8 @@ func _physics_process(_delta: float) -> void:
 	if is_returning:
 		var direction = (starting_position - global_position)
 		var distance_to_start = direction.length()
-		# If position is exactly at starting position, stop returning
-		if global_position == starting_position:
-			is_returning = false
-			velocity = Vector2.ZERO
-			_play_idle()
-			return
 		
+		# If position is exactly at starting position, stop returning
 		if distance_to_start > 5.0:  # Small threshold to avoid jittering
 			direction = direction.normalized()
 			velocity = direction * speed
@@ -115,13 +109,11 @@ func _physics_process(_delta: float) -> void:
 			velocity = Vector2.ZERO
 			is_returning = false
 			global_position = starting_position  # Snap to exact position
-			_play_idle()
-			# Check if player is still in detection zone to resume following
-			#if player_target and global_position.distance_to(player_target.global_position) <= detection_radius:
-				#print("Is returning is following")
-				#print(global_position.distance_to(player_target.global_position))
-				#is_following = true
-				
+			if global_position == starting_position:
+				is_returning = false
+				velocity = Vector2.ZERO
+				_play_idle()
+				return
 	elif is_following and player_target:
 		var direction = (player_target.global_position - global_position)
 		var distance_to_player = direction.length()
